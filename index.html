@@ -50,10 +50,11 @@
     background: #fff; border: 2px solid #1a4d8f; position: relative;
     font-size: 12px; color: #111;
   }
-  .doc-date { position: absolute; top: 10mm; left: 14mm; font-size: 11px; }
-  .doc-title { text-align: center; margin-top: 6mm; }
-  .doc-title h2 { margin: 0; font-size: 22px; letter-spacing: 1px; }
-  .doc-title h3 { margin: 4px 0 0; font-size: 18px; font-weight: 500; }
+  .doc-date { position: absolute; top: 10mm; left: 14mm; font-size: 11px; z-index: 2; }
+  .doc-title { text-align: center; margin-top: 6mm; position: relative; z-index: 2; }
+  .doc-title h2 { margin: 0; font-size: 26px; letter-spacing: 2px; color: #0d1b3e; }
+  .doc-title h3 { margin: 6px 0 0; font-size: 20px; font-weight: 700; letter-spacing: 1px; color: #1a4d8f; }
+  .doc-title h4 { margin: 4px 0 0; font-size: 16px; font-weight: 500; color: #444; }
   .hr { border-top: 1px solid #999; margin: 8mm auto; width: 60%; }
   .section-title { text-align: center; font-weight: 700; font-size: 14px; margin: 6mm 0 3mm; }
   .underline { width: 60%; height: 1px; background: #999; margin: 0 auto 4mm; }
@@ -75,19 +76,27 @@
   .notes p { margin: 2mm 0; font-size: 11.5px; line-height: 1.5; }
   .watermark {
     position: absolute; inset: 0; display: flex; align-items: center;
-    justify-content: center; pointer-events: none; opacity: .06;
-    font-size: 90px; font-weight: 800; color: #1a4d8f; transform: rotate(-20deg);
+    justify-content: center; pointer-events: none; opacity: .07;
+    z-index: 0; transform: rotate(-18deg);
   }
+  .watermark svg { width: 70%; height: auto; max-width: 500px; }
+  table.doc-table, .notes, .section-title, .underline, .hr { position: relative; z-index: 1; }
 
-  /* الطباعة */
+  /* الطباعة A4 */
   @media print {
-    body { background: #fff; }
+    html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
     .panel, h1, .no-print { display: none !important; }
-    .document { border: 2px solid #1a4d8f; box-shadow: none; margin: 0; }
-    .qr-cell img { width: 90px !important; height: 90px !important; display: inline-block !important;
-                   -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    @page { size: A4; margin: 0; }
+    .document-wrap { display: block !important; }
+    .document {
+      width: 210mm !important; height: 297mm !important; min-height: 297mm !important;
+      max-height: 297mm !important; padding: 12mm !important;
+      border: 2px solid #1a4d8f !important; box-shadow: none !important;
+      margin: 0 !important; page-break-after: avoid !important; overflow: hidden !important;
+    }
+    .qr-cell img { width: 95px !important; height: 95px !important; display: inline-block !important; }
+    .watermark { opacity: .08 !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    @page { size: A4 portrait; margin: 0; }
   }
 
   /* الهاتف */
@@ -170,11 +179,21 @@
   <div class="document-wrap">
     <div class="document" id="doc">
       <div class="doc-date" id="d_date"></div>
-      <div class="watermark">EGYPT VISA</div>
+      <div class="watermark" aria-hidden="true">
+        <svg viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="300" cy="300" r="240" fill="none" stroke="#1a4d8f" stroke-width="6"/>
+          <circle cx="300" cy="300" r="200" fill="none" stroke="#1a4d8f" stroke-width="2"/>
+          <text x="300" y="270" text-anchor="middle" font-family="Arial,sans-serif" font-size="120" font-weight="900" fill="#1a4d8f">AL</text>
+          <text x="300" y="380" text-anchor="middle" font-family="Arial,sans-serif" font-size="80" font-weight="700" fill="#1a4d8f">YAMI</text>
+          <text x="300" y="450" text-anchor="middle" font-family="Arial,sans-serif" font-size="42" font-weight="600" fill="#1a4d8f">TRAVEL &amp; TOURISM</text>
+          <text x="300" y="500" text-anchor="middle" font-family="Tahoma,Arial" font-size="36" fill="#1a4d8f">اليامي للسفر والسياحة</text>
+        </svg>
+      </div>
 
       <div class="doc-title">
-        <h2>OK TO BOARD VERIFICATION</h2>
-        <h3>تأكيد صحة السفر</h3>
+        <h2>E-VISA TO EGYPT</h2>
+        <h3 class="sub-title">OK TO BOARD</h3>
+        <h4>تأكيد صحة السفر</h4>
       </div>
       <div class="hr"></div>
 
@@ -322,17 +341,9 @@
     $('d_flight').textContent = data.flight;
     $('d_arrival').textContent = fmtDateUS(data.arrival);
 
-    const qrPayload = JSON.stringify({
-      vno: data.vno,
-      name: data.name_en || data.name,
-      passport: data.passport,
-      birth: data.birth,
-      nationality: data.nationality,
-      flight: data.flight,
-      arrival: data.arrival,
-      issue: data.issue,
-      valid: data.valid
-    });
+    const qrPayload =
+      'Name: ' + (data.name_en || data.name || '-') +
+      '\nPassport: ' + (data.passport || '-');
     const fallbackQR = 'https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=2&data=' + encodeURIComponent(qrPayload);
     if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
       QRCode.toDataURL(qrPayload, { width: 360, margin: 1, errorCorrectionLevel: 'M' }, (err, url) => {
