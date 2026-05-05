@@ -333,10 +333,14 @@
       issue: data.issue,
       valid: data.valid
     });
-    QRCode.toDataURL(qrPayload, { width: 360, margin: 1, errorCorrectionLevel: 'M' }, (err, url) => {
-      if (err) { console.error(err); return; }
-      $('qr').src = url;
-    });
+    const fallbackQR = 'https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=2&data=' + encodeURIComponent(qrPayload);
+    if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
+      QRCode.toDataURL(qrPayload, { width: 360, margin: 1, errorCorrectionLevel: 'M' }, (err, url) => {
+        $('qr').src = (err || !url) ? fallbackQR : url;
+      });
+    } else {
+      $('qr').src = fallbackQR;
+    }
 
     try {
       localStorage.setItem('okToBoard:last', JSON.stringify(data));
