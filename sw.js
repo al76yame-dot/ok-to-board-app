@@ -1,7 +1,8 @@
-const CACHE = 'okboard-v8';
+const CACHE = 'okboard-v9';
 const ASSETS = [
   './',
   './index.html',
+  './verify.html',
   './manifest.json',
   './logo.svg',
   'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js'

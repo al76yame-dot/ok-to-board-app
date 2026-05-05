@@ -358,19 +358,26 @@
 
     const qrName = (data.name_en || data.name || '').trim() || 'N/A';
     const qrPass = (data.passport || '').trim() || 'N/A';
-    const qrPayload = 'Name: ' + qrName + '\nPassport: ' + qrPass;
+    // الباركود يحتوي رابط صفحة التحقق الإلكتروني — أي قارئ QR سيفتحه
+    const verifyBase = location.origin + location.pathname.replace(/[^/]*$/, '') + 'verify.html';
+    const qrPayload = verifyBase
+      + '?n=' + encodeURIComponent(qrName)
+      + '&p=' + encodeURIComponent(qrPass)
+      + '&v=' + encodeURIComponent(data.vno || '');
     $('qr_caption').innerHTML = '<b>' + qrName + '</b><br>' + qrPass;
     console.log('QR payload:', qrPayload);
-    // استخدام api.qrserver.com كمصدر أساسي (موثوق ويعمل بدون مكتبات)
-    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&ecc=M&data=' + encodeURIComponent(qrPayload);
-    $('qr').src = qrUrl;
-    $('qr').onerror = () => {
-      if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
-        QRCode.toDataURL(qrPayload, { width: 400, margin: 1, errorCorrectionLevel: 'M' }, (err, url) => {
-          if (!err && url) $('qr').src = url;
-        });
-      }
-    };
+    // توليد QR محلياً (PNG dataURL) - أوضح وأكثر موثوقية
+    if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
+      QRCode.toDataURL(qrPayload, { width: 400, margin: 1, errorCorrectionLevel: 'M' }, (err, url) => {
+        if (!err && url) {
+          $('qr').src = url;
+        } else {
+          $('qr').src = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&ecc=M&data=' + encodeURIComponent(qrPayload);
+        }
+      });
+    } else {
+      $('qr').src = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&ecc=M&data=' + encodeURIComponent(qrPayload);
+    }
 
     try {
       localStorage.setItem('okToBoard:last', JSON.stringify(data));
