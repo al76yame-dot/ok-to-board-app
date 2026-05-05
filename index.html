@@ -84,19 +84,33 @@
 
   /* الطباعة A4 */
   @media print {
-    html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+    html, body { background: #fff !important; margin: 0 !important; padding: 0 !important;
+                 width: 210mm; height: 297mm; }
+    .app { padding: 0 !important; max-width: none !important; }
     .panel, h1, .no-print { display: none !important; }
-    .document-wrap { display: block !important; }
+    .document-wrap { display: block !important; margin: 0 !important; padding: 0 !important; }
     .document {
-      width: 210mm !important; height: 297mm !important; min-height: 297mm !important;
-      max-height: 297mm !important; padding: 12mm !important;
-      border: 2px solid #1a4d8f !important; box-shadow: none !important;
-      margin: 0 !important; page-break-after: avoid !important; overflow: hidden !important;
+      width: 190mm !important; min-height: auto !important; height: auto !important;
+      max-height: none !important; padding: 8mm 10mm !important;
+      border: 1.5px solid #1a4d8f !important; box-shadow: none !important;
+      margin: 0 auto !important; font-size: 11px !important;
+      page-break-after: avoid !important; page-break-inside: avoid !important;
     }
-    .qr-cell img { width: 95px !important; height: 95px !important; display: inline-block !important; }
-    .watermark { opacity: .08 !important; }
+    .doc-date { top: 6mm !important; left: 10mm !important; font-size: 10px !important; }
+    .doc-title { margin-top: 4mm !important; }
+    .doc-title h2 { font-size: 22px !important; }
+    .doc-title h3 { font-size: 17px !important; }
+    .doc-title h4 { font-size: 13px !important; }
+    .hr { margin: 4mm auto !important; }
+    .section-title { font-size: 12px !important; margin: 4mm 0 2mm !important; }
+    table.doc-table td { padding: 4px 6px !important; font-size: 10.5px !important; }
+    .qr-cell img { width: 85px !important; height: 85px !important; display: inline-block !important; }
+    .notes { margin-top: 5mm !important; padding: 4mm !important; }
+    .notes h4 { font-size: 12px !important; margin: 0 0 2mm !important; }
+    .notes p { font-size: 10px !important; margin: 1mm 0 !important; line-height: 1.35 !important; }
+    .watermark { opacity: .07 !important; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
-    @page { size: A4 portrait; margin: 0; }
+    @page { size: A4 portrait; margin: 8mm; }
   }
 
   /* الهاتف */
@@ -334,9 +348,10 @@
     $('d_flight').textContent = data.flight;
     $('d_arrival').textContent = fmtDateUS(data.arrival);
 
-    const qrPayload =
-      'Name: ' + (data.name_en || data.name || '-') +
-      '\nPassport: ' + (data.passport || '-');
+    const qrName = (data.name_en || data.name || '').trim() || 'N/A';
+    const qrPass = (data.passport || '').trim() || 'N/A';
+    const qrPayload = 'Name: ' + qrName + '\nPassport: ' + qrPass;
+    console.log('QR payload:', qrPayload);
     const fallbackQR = 'https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=2&data=' + encodeURIComponent(qrPayload);
     if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
       QRCode.toDataURL(qrPayload, { width: 360, margin: 1, errorCorrectionLevel: 'M' }, (err, url) => {
@@ -378,6 +393,15 @@
 
   // إعادة توليد رقم التحقق عند الضغط مرتين عليه
   $('vno').addEventListener('dblclick', () => { $('vno').value = genVerificationNo(); });
+
+  // تحديث الوثيقة تلقائياً عند تعديل أي حقل
+  document.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('input', () => generate());
+    el.addEventListener('change', () => generate());
+  });
+
+  // إعادة التوليد قبل الطباعة لضمان أحدث QR
+  window.addEventListener('beforeprint', () => generate());
 
   // ===== PWA: تسجيل Service Worker وزر التثبيت =====
   if ('serviceWorker' in navigator) {
