@@ -67,6 +67,9 @@
   .label-cell { background: #e7eef7; font-weight: 600; width: 35%; }
   .qr-cell { text-align: center; vertical-align: middle; width: 30%; }
   .qr-cell img, .qr-cell canvas { width: 90px; height: 90px; display: inline-block; }
+  .qr-caption { font-size: 9px; color: #333; margin-top: 3px; line-height: 1.3;
+                word-break: break-word; text-align: center; font-family: Arial, sans-serif; }
+  .qr-caption b { color: #0d1b3e; }
 
   .notes {
     margin-top: 8mm; border: 2px solid #d33; border-radius: 4px;
@@ -212,7 +215,10 @@
       <table class="doc-table">
         <tr>
           <td class="label-cell">Verification Number | رقم التحقق</td>
-          <td class="qr-cell" rowspan="2"><img id="qr" alt="QR" /></td>
+          <td class="qr-cell" rowspan="2">
+            <img id="qr" alt="QR" />
+            <div id="qr_caption" class="qr-caption"></div>
+          </td>
           <td class="label-cell">Date of Issue | تاريخ الإصدار</td>
         </tr>
         <tr>
@@ -353,6 +359,7 @@
     const qrName = (data.name_en || data.name || '').trim() || 'N/A';
     const qrPass = (data.passport || '').trim() || 'N/A';
     const qrPayload = 'Name: ' + qrName + '\nPassport: ' + qrPass;
+    $('qr_caption').innerHTML = '<b>' + qrName + '</b><br>' + qrPass;
     console.log('QR payload:', qrPayload);
     // استخدام api.qrserver.com كمصدر أساسي (موثوق ويعمل بدون مكتبات)
     const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&ecc=M&data=' + encodeURIComponent(qrPayload);
