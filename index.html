@@ -65,7 +65,7 @@
   }
   .label-cell { background: #e7eef7; font-weight: 600; width: 35%; }
   .qr-cell { text-align: center; vertical-align: middle; width: 30%; }
-  .qr-cell img, .qr-cell canvas { width: 90px; height: 90px; }
+  .qr-cell img, .qr-cell canvas { width: 90px; height: 90px; display: inline-block; }
 
   .notes {
     margin-top: 8mm; border: 2px solid #d33; border-radius: 4px;
@@ -84,6 +84,9 @@
     body { background: #fff; }
     .panel, h1, .no-print { display: none !important; }
     .document { border: 2px solid #1a4d8f; box-shadow: none; margin: 0; }
+    .qr-cell img { width: 90px !important; height: 90px !important; display: inline-block !important;
+                   -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     @page { size: A4; margin: 0; }
   }
 
@@ -181,7 +184,7 @@
       <table class="doc-table">
         <tr>
           <td class="label-cell">Verification Number | رقم التحقق</td>
-          <td class="qr-cell" rowspan="2"><canvas id="qr"></canvas></td>
+          <td class="qr-cell" rowspan="2"><img id="qr" alt="QR" /></td>
           <td class="label-cell">Date of Issue | تاريخ الإصدار</td>
         </tr>
         <tr>
@@ -330,8 +333,9 @@
       issue: data.issue,
       valid: data.valid
     });
-    QRCode.toCanvas($('qr'), qrPayload, { width: 180, margin: 1 }, err => {
-      if (err) console.error(err);
+    QRCode.toDataURL(qrPayload, { width: 360, margin: 1, errorCorrectionLevel: 'M' }, (err, url) => {
+      if (err) { console.error(err); return; }
+      $('qr').src = url;
     });
 
     try {
