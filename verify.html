@@ -57,6 +57,8 @@
   const name = params.get('n') || '';
   const passport = params.get('p') || '';
   const vno = params.get('v') || '';
+  const visaType = params.get('vt') || '';
+  const visaNo = params.get('vn') || '';
   const content = document.getElementById('content');
 
   if (!name && !passport) {
@@ -65,6 +67,8 @@
     let html = '';
     if (name) html += `<div class="row"><span class="label">Passenger Name | اسم المسافر</span><span class="value">${escapeHtml(name)}</span></div>`;
     if (passport) html += `<div class="row"><span class="label">Passport No. | رقم الجواز</span><span class="value">${escapeHtml(passport)}</span></div>`;
+    if (visaType) html += `<div class="row"><span class="label">Visa Type | نوع التأشيرة</span><span class="value">${escapeHtml(visaType)}</span></div>`;
+    if (visaNo) html += `<div class="row"><span class="label">Visa No. | رقم التأشيرة</span><span class="value">${escapeHtml(visaNo)}</span></div>`;
     if (vno) html += `<div class="row"><span class="label">Verification No. | رقم التحقق</span><span class="value">${escapeHtml(vno)}</span></div>`;
     content.innerHTML = html;
   }

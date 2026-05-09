@@ -83,7 +83,16 @@
     z-index: 0; transform: rotate(-18deg);
   }
   .watermark svg, .watermark img { width: 70%; height: auto; max-width: 500px; }
-  table.doc-table, .notes, .section-title, .underline, .hr { position: relative; z-index: 1; }
+  table.doc-table, .notes, .section-title, .underline, .hr, .doc-footer { position: relative; z-index: 1; }
+
+  .doc-footer {
+    margin-top: 6mm; padding-top: 4mm; border-top: 2px solid #1a4d8f;
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+  }
+  .footer-logo { width: 55px; height: 55px; object-fit: contain; }
+  .footer-text { text-align: center; }
+  .footer-en { font-size: 13px; font-weight: 800; color: #0d1b3e; letter-spacing: 1.5px; }
+  .footer-ar { font-size: 12px; font-weight: 600; color: #1a4d8f; margin-top: 2px; }
 
   /* الطباعة A4 - الورقة كاملة */
   @media print {
@@ -186,6 +195,22 @@
           <option>Boarding Approval</option>
         </select>
       </div>
+      <div>
+        <label>نوع التأشيرة</label>
+        <select id="visa_type">
+          <option>Tourist Visa | تأشيرة سياحية</option>
+          <option>Business Visa | تأشيرة عمل</option>
+          <option>Transit Visa | تأشيرة عبور</option>
+          <option>Family Visit | زيارة عائلية</option>
+          <option>Medical Visa | تأشيرة علاج</option>
+          <option>Student Visa | تأشيرة دراسة</option>
+          <option>Umrah Visa | تأشيرة عمرة</option>
+        </select>
+      </div>
+      <div>
+        <label>رقم التأشيرة</label>
+        <input id="visa_no" placeholder="VIS-2026-0000" />
+      </div>
     </div>
     <div class="actions">
       <button class="btn-primary" onclick="generate()">توليد الوثيقة</button>
@@ -257,6 +282,14 @@
           <td id="d_nat"></td>
           <td id="d_birth"></td>
         </tr>
+        <tr>
+          <td class="label-cell">Visa Type | نوع التأشيرة</td>
+          <td class="label-cell">Visa Number | رقم التأشيرة</td>
+        </tr>
+        <tr>
+          <td id="d_visa_type"></td>
+          <td id="d_visa_no"></td>
+        </tr>
       </table>
 
       <div class="section-title" style="text-align:right">FLIGHT DETAILS | معلومات الرحلة</div>
@@ -285,6 +318,14 @@
         <p style="text-align:right">هذا التحقق يخضع للتغيير بناءً على تعليمات الجهات الأمنية</p>
         <p>- The final decision regarding boarding and entry rests with the boarding officer and the security authorities at port of entry.</p>
         <p style="text-align:right">القرار النهائي للصعود والدخول يقع على عاتق ضابط الجوازات و الجهات الأمنية في منفذ الدخول</p>
+      </div>
+
+      <div class="doc-footer">
+        <img src="logo.svg" alt="ALYAME TRAVEL & TOURISM" class="footer-logo" />
+        <div class="footer-text">
+          <div class="footer-en">ALYAME TRAVEL &amp; TOURISM</div>
+          <div class="footer-ar">اليامي للسفر والسياحة</div>
+        </div>
       </div>
     </div>
   </div>
@@ -337,7 +378,9 @@
       issue: $('issue').value,
       valid: $('valid').value,
       vno: $('vno').value,
-      vtype: $('vtype').value
+      vtype: $('vtype').value,
+      visa_type: $('visa_type').value,
+      visa_no: $('visa_no').value
     };
 
     $('d_date').textContent = new Date().toLocaleString('en-US', {
@@ -351,6 +394,8 @@
     $('d_name').textContent = data.name;
     $('d_passport').textContent = data.passport;
     $('d_nat').textContent = data.nationality;
+    $('d_visa_type').textContent = data.visa_type;
+    $('d_visa_no').textContent = data.visa_no;
     $('d_birth').textContent = fmtDateUS(data.birth);
     $('d_airline').textContent = data.airline;
     $('d_flight').textContent = data.flight;
@@ -363,7 +408,9 @@
     const qrPayload = verifyBase
       + '?n=' + encodeURIComponent(qrName)
       + '&p=' + encodeURIComponent(qrPass)
-      + '&v=' + encodeURIComponent(data.vno || '');
+      + '&v=' + encodeURIComponent(data.vno || '')
+      + '&vt=' + encodeURIComponent(data.visa_type || '')
+      + '&vn=' + encodeURIComponent(data.visa_no || '');
     $('qr_caption').innerHTML = '<b>' + qrName + '</b><br>' + qrPass;
     console.log('QR payload:', qrPayload);
     // توليد QR محلياً (PNG dataURL) - أوضح وأكثر موثوقية
