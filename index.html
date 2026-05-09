@@ -94,6 +94,13 @@
   .footer-en { font-size: 13px; font-weight: 800; color: #0d1b3e; letter-spacing: 1.5px; }
   .footer-ar { font-size: 12px; font-weight: 600; color: #1a4d8f; margin-top: 2px; }
 
+  .doc-stamp {
+    position: absolute; bottom: 28mm; left: 16mm;
+    width: 38mm; height: auto; opacity: 0.9;
+    transform: rotate(-8deg); pointer-events: none; z-index: 3;
+    mix-blend-mode: multiply;
+  }
+
   /* الطباعة A4 - الورقة كاملة */
   @media print {
     html, body { background: #fff !important; margin: 0 !important; padding: 0 !important;
@@ -123,6 +130,8 @@
     .notes h4 { font-size: 13px !important; margin: 0 0 3mm !important; }
     .notes p { font-size: 10.5px !important; margin: 1.5mm 0 !important; line-height: 1.4 !important; }
     .watermark { opacity: .08 !important; }
+    .doc-stamp { width: 38mm !important; bottom: 28mm !important; left: 16mm !important;
+                 opacity: 0.9 !important; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
     @page { size: A4 portrait; margin: 0 !important; }
   }
@@ -315,6 +324,8 @@
         <p>- The final decision regarding boarding and entry rests with the boarding officer and the security authorities at port of entry.</p>
         <p style="text-align:right">القرار النهائي للصعود والدخول يقع على عاتق ضابط الجوازات و الجهات الأمنية في منفذ الدخول</p>
       </div>
+
+      <img src="stamp.png" alt="Stamp" class="doc-stamp" />
 
       <div class="doc-footer">
         <img src="logo.svg" alt="ALYAME TRAVEL & TOURISM" class="footer-logo" />
