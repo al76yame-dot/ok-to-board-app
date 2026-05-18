@@ -361,11 +361,32 @@
     d.setMonth(d.getMonth() + months);
     return d.toISOString().slice(0,10);
   }
+  function addDays(iso, days) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0,10);
+  }
   function todayISO() { return new Date().toISOString().slice(0,10); }
+
+  // حساب الصلاحية حسب نوع التأشيرة
+  function validityForVisaType(visaType, issueIso) {
+    if (!issueIso) return '';
+    if (visaType && visaType.indexOf('Electronic') === 0) return addDays(issueIso, 90);   // رقمية: 90 يوم
+    if (visaType && visaType.indexOf('VIP') === 0)        return addDays(issueIso, 1);    // تشريفات: 24 ساعة
+    if (visaType && visaType.indexOf('Security') === 0)   return addDays(issueIso, 1);    // موافقة أمنية: 24 ساعة
+    return addMonths(issueIso, 3);
+  }
+
+  function applyValidityFromType() {
+    const issueIso = $('issue').value || todayISO();
+    if (!$('issue').value) $('issue').value = issueIso;
+    $('valid').value = validityForVisaType($('visa_type').value, issueIso);
+  }
 
   function initDefaults() {
     if (!$('issue').value) $('issue').value = todayISO();
-    if (!$('valid').value) $('valid').value = addMonths($('issue').value, 3);
+    if (!$('valid').value) $('valid').value = validityForVisaType($('visa_type').value, $('issue').value);
     if (!$('vno').value) $('vno').value = genVerificationNo();
   }
 
@@ -464,6 +485,10 @@
 
   // إعادة توليد رقم التحقق عند الضغط مرتين عليه
   $('vno').addEventListener('dblclick', () => { $('vno').value = genVerificationNo(); });
+
+  // عند تغيير نوع التأشيرة أو تاريخ الإصدار → إعادة حساب الصلاحية تلقائياً
+  $('visa_type').addEventListener('change', () => { applyValidityFromType(); generate(); });
+  $('issue').addEventListener('change', () => { applyValidityFromType(); generate(); });
 
   // تحديث الوثيقة تلقائياً عند تعديل أي حقل
   document.querySelectorAll('input, select').forEach(el => {
