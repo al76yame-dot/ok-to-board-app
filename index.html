@@ -94,6 +94,14 @@
   .footer-en { font-size: 13px; font-weight: 800; color: #0d1b3e; letter-spacing: 1.5px; }
   .footer-ar { font-size: 12px; font-weight: 600; color: #1a4d8f; margin-top: 2px; }
 
+  .copyright { margin-top: 4mm; padding-top: 2mm; border-top: 1px dashed #999;
+               font-size: 9px; color: #444; text-align: center; line-height: 1.45;
+               position: relative; z-index: 1; }
+  .copyright .cr-line { margin: 1mm 0; }
+  .copyright .cr-warn { margin-top: 2mm; padding: 2mm; background: #fff3cd;
+                        border: 1px solid #ffc107; border-radius: 3px;
+                        color: #856404; font-size: 8.5px; font-weight: 600; }
+
   .doc-stamp {
     position: absolute; bottom: 28mm; left: 16mm;
     width: 42mm; height: auto; opacity: 1;
@@ -217,10 +225,15 @@
       </div>
     </div>
     <div class="actions">
-      <button class="btn-primary" onclick="generate()">توليد الوثيقة</button>
-      <button class="btn-print" onclick="window.print()">طباعة / حفظ PDF</button>
+      <button id="btnGenerate" class="btn-primary" onclick="generate()">توليد الوثيقة</button>
+      <button id="btnIssue" class="btn-print" onclick="issueDocument()" style="background:#c62828">🔒 إصدار وقفل الوثيقة</button>
+      <button class="btn-print" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+      <button id="btnUnlock" class="btn-secondary" onclick="unlockForm()" style="display:none">🔓 فتح القفل (إصدار جديد)</button>
       <button class="btn-secondary" onclick="resetForm()">مسح</button>
       <button id="btnInstall" class="btn-primary" style="display:none;background:#198754" onclick="installApp()">📲 تثبيت كتطبيق</button>
+    </div>
+    <div id="issuedBadge" style="display:none;margin-top:10px;padding:10px;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;color:#856404;font-size:13px">
+      🔒 <b>تم إصدار الوثيقة وقفلها.</b> لا يمكن تعديلها. لإصدار وثيقة جديدة اضغط "فتح القفل".
     </div>
   </div>
 
@@ -332,6 +345,13 @@
           <div class="footer-en">ALYAME TRAVEL &amp; TOURISM</div>
           <div class="footer-ar">اليامي للسفر والسياحة</div>
         </div>
+      </div>
+
+      <div class="copyright">
+        <div class="cr-line"><b>© <span id="cr_year"></span> ALYAME TRAVEL &amp; TOURISM</b> — All rights reserved. جميع الحقوق محفوظة.</div>
+        <div class="cr-line">Document ID: <b id="doc_id">—</b> &nbsp;|&nbsp; Hash: <b id="doc_hash">—</b> &nbsp;|&nbsp; Issued: <b id="doc_issued_at">—</b></div>
+        <div class="cr-warn">⚠ Reprinting, modifying, or altering this document after issuance is strictly prohibited and constitutes forgery.<br>
+        يُمنع منعاً باتاً إعادة طباعة هذه الوثيقة أو تعديلها أو تغيير أي بيانات فيها بعد إصدارها — وأي تلاعب يُعد تزويراً يعاقب عليه القانون.</div>
       </div>
     </div>
   </div>
@@ -489,6 +509,107 @@
   // عند تغيير نوع التأشيرة أو تاريخ الإصدار → إعادة حساب الصلاحية تلقائياً
   $('visa_type').addEventListener('change', () => { applyValidityFromType(); generate(); });
   $('issue').addEventListener('change', () => { applyValidityFromType(); generate(); });
+
+  // ===== سنة حقوق النشر =====
+  $('cr_year').textContent = new Date().getFullYear();
+
+  // ===== توليد معرّف وثيقة + بصمة (Hash) لكشف التزوير =====
+  function simpleHash(str) {
+    // FNV-1a 32-bit hash → hex
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+    }
+    return h.toString(16).toUpperCase().padStart(8, '0');
+  }
+
+  function genDocId() {
+    const t = Date.now().toString(36).toUpperCase();
+    const r = Math.random().toString(36).slice(2, 6).toUpperCase();
+    return 'DOC-' + t + '-' + r;
+  }
+
+  // ===== إصدار الوثيقة وقفل النموذج =====
+  let isIssued = false;
+
+  function issueDocument() {
+    generate(); // ضمان أحدث بيانات
+
+    const requiredFields = [
+      ['name_ar', 'اسم المسافر (عربي)'],
+      ['name_en', 'Passenger Name (English)'],
+      ['passport', 'رقم جواز السفر']
+    ];
+    for (const [id, label] of requiredFields) {
+      if (!$(id).value.trim()) {
+        alert('الرجاء إدخال: ' + label);
+        $(id).focus();
+        return;
+      }
+    }
+
+    if (!confirm('⚠️ تنبيه: بعد الإصدار سيتم قفل الوثيقة ولن يمكن تعديلها.\n\nهل تريد المتابعة؟')) return;
+
+    const issuedAt = new Date();
+    const docId = genDocId();
+    const hashSource = [
+      $('name_en').value, $('passport').value, $('vno').value,
+      $('issue').value, $('valid').value, $('visa_type').value,
+      $('visa_no').value, docId, issuedAt.toISOString()
+    ].join('|');
+    const hash = simpleHash(hashSource);
+
+    $('doc_id').textContent = docId;
+    $('doc_hash').textContent = hash;
+    $('doc_issued_at').textContent = issuedAt.toLocaleString('en-GB');
+
+    // قفل جميع الحقول
+    document.querySelectorAll('.panel input, .panel select').forEach(el => {
+      el.disabled = true;
+      el.style.background = '#f0f0f0';
+      el.style.cursor = 'not-allowed';
+    });
+    $('btnGenerate').disabled = true;
+    $('btnIssue').style.display = 'none';
+    $('btnUnlock').style.display = 'inline-block';
+    $('issuedBadge').style.display = 'block';
+    isIssued = true;
+
+    // إعادة توليد QR بحيث يحتوي docId و hash
+    const verifyBase = location.origin + location.pathname.replace(/[^/]*$/, '') + 'verify.html';
+    const qrUrl = verifyBase
+      + '?n=' + encodeURIComponent(($('name_en').value || $('name_ar').value || '').trim())
+      + '&p=' + encodeURIComponent($('passport').value.trim())
+      + '&v=' + encodeURIComponent($('vno').value)
+      + '&vt=' + encodeURIComponent($('visa_type').value)
+      + '&vn=' + encodeURIComponent($('visa_no').value)
+      + '&d=' + encodeURIComponent(docId)
+      + '&h=' + encodeURIComponent(hash);
+    if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
+      QRCode.toDataURL(qrUrl, { width: 400, margin: 1, errorCorrectionLevel: 'M' }, (err, url) => {
+        if (!err && url) $('qr').src = url;
+        else $('qr').src = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&data=' + encodeURIComponent(qrUrl);
+      });
+    }
+  }
+
+  function unlockForm() {
+    if (!confirm('سيتم فتح النموذج لإصدار وثيقة جديدة. هل تريد المتابعة؟')) return;
+    document.querySelectorAll('.panel input, .panel select').forEach(el => {
+      el.disabled = false;
+      el.style.background = '';
+      el.style.cursor = '';
+    });
+    $('btnGenerate').disabled = false;
+    $('btnIssue').style.display = 'inline-block';
+    $('btnUnlock').style.display = 'none';
+    $('issuedBadge').style.display = 'none';
+    $('doc_id').textContent = '—';
+    $('doc_hash').textContent = '—';
+    $('doc_issued_at').textContent = '—';
+    isIssued = false;
+  }
 
   // تحديث الوثيقة تلقائياً عند تعديل أي حقل
   document.querySelectorAll('input, select').forEach(el => {
