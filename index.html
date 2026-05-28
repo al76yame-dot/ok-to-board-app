@@ -560,19 +560,47 @@
       return;
     }
     const doc = document.getElementById('doc');
-    const old = doc.style.boxShadow;
-    doc.style.boxShadow = 'none';
+
+    // إخفاء العناصر الثقيلة مؤقتاً (الشعار 3.4MB يفشل في html2canvas)
+    const watermark = doc.querySelector('.watermark');
+    const stamp = doc.querySelector('.doc-stamp');
+    const microtext = doc.querySelector('.security-microtext');
+    const savedStyles = new Map();
+    [watermark, stamp, microtext].forEach(el => {
+      if (el) {
+        savedStyles.set(el, el.style.cssText);
+        el.style.visibility = 'hidden';
+      }
+    });
+
+    // مؤشر تحميل
+    const loader = document.createElement('div');
+    loader.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;font-family:Arial';
+    loader.innerHTML = '⏳ جارٍ توليد الصورة الآمنة...';
+    document.body.appendChild(loader);
+
+    const restore = () => {
+      [watermark, stamp, microtext].forEach(el => {
+        if (el && savedStyles.has(el)) el.style.cssText = savedStyles.get(el);
+      });
+      if (loader.parentNode) loader.parentNode.removeChild(loader);
+    };
 
     try {
       const canvas = await html2canvas(doc, {
-        scale: 2.5,         // دقة عالية للطباعة الواضحة
+        scale: 2,
         useCORS: true,
+        allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
+        imageTimeout: 20000,
+        foreignObjectRendering: false,
+        removeContainer: true,
         windowWidth: doc.offsetWidth,
         windowHeight: doc.offsetHeight
       });
-      const imgData = canvas.toDataURL('image/png', 1.0);
+      const imgData = canvas.toDataURL('image/png', 0.95);
+      restore();
 
       const win = window.open('', '_blank');
       win.document.write(`
@@ -624,11 +652,10 @@
       `);
       win.document.close();
     } catch (err) {
-      console.error(err);
-      alert('فشلت الطباعة الآمنة. سأستخدم الطباعة العادية.\n' + err.message);
+      restore();
+      console.error('Secure print error:', err);
+      alert('فشل توليد الصورة الآمنة:\n' + (err && err.message ? err.message : err) + '\n\nسيتم استخدام الطباعة العادية.');
       window.print();
-    } finally {
-      doc.style.boxShadow = old;
     }
   }
 
