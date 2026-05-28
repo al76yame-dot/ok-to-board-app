@@ -1,4 +1,4 @@
-const CACHE = 'okboard-v16';
+const CACHE = 'okboard-v17';
 const ASSETS = [
   './',
   './index.html',
