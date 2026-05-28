@@ -1,4 +1,4 @@
-const CACHE = 'okboard-v18';
+const CACHE = 'okboard-v19';
 const ASSETS = [
   './',
   './index.html',
@@ -6,8 +6,7 @@ const ASSETS = [
   './manifest.json',
   './logo.svg',
   './stamp.png',
-  'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js',
-  'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'
+  'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js'
 ];
 
 self.addEventListener('install', e => {

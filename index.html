@@ -11,7 +11,6 @@
 <meta name="apple-mobile-web-app-title" content="OK to Board" />
 <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='28' fill='%231a4d8f'/><text x='96' y='90' font-size='42' font-weight='800' text-anchor='middle' fill='white' font-family='Arial'>OK</text><text x='96' y='140' font-size='30' font-weight='600' text-anchor='middle' fill='white' font-family='Arial'>BOARD</text></svg>" />
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -52,23 +51,26 @@
     font-size: 10.5px; color: #111; box-sizing: border-box; overflow: hidden;
   }
   .doc-date { position: absolute; top: 4mm; left: 10mm; font-size: 9.5px; z-index: 2; }
-  .doc-title { text-align: center; margin-top: 2mm; position: relative; z-index: 2; }
-  .doc-title h2 { margin: 0; font-size: 21px; letter-spacing: 1.5px; color: #0d1b3e; }
-  .doc-title h3 { margin: 3px 0 0; font-size: 16px; font-weight: 700; letter-spacing: 1px; color: #1a4d8f; }
-  .doc-title h4 { margin: 2px 0 0; font-size: 12px; font-weight: 500; color: #444; }
-  .hr { border-top: 1px solid #999; margin: 3mm auto; width: 50%; }
-  .section-title { text-align: center; font-weight: 700; font-size: 11px; margin: 3mm 0 1.5mm; }
-  .underline { width: 50%; height: 1px; background: #999; margin: 0 auto 2mm; }
+  .doc-title { text-align: center; margin-top: 3mm; position: relative; z-index: 2;
+               padding-bottom: 3mm; border-bottom: 2px solid #1a4d8f; }
+  .doc-title h2 { margin: 0; font-size: 24px; letter-spacing: 2px; color: #0d1b3e; font-weight: 900; }
+  .doc-title h3 { margin: 4px 0 0; font-size: 18px; font-weight: 700; letter-spacing: 1.2px; color: #1a4d8f; }
+  .doc-title h4 { margin: 3px 0 0; font-size: 13px; font-weight: 500; color: #555; }
+  .hr { display: none; }
+  .section-title { text-align: center; font-weight: 800; font-size: 12px; margin: 4mm 0 2mm;
+                   color: #0d1b3e; letter-spacing: 0.5px; padding: 2px 0;
+                   background: linear-gradient(to right, transparent, #e7eef7, transparent); }
+  .underline { display: none; }
 
-  table.doc-table { width: 100%; border-collapse: collapse; }
+  table.doc-table { width: 100%; border-collapse: collapse; box-shadow: 0 0 0 1px #b9c2cc; }
   table.doc-table td {
-    border: 1px solid #b9c2cc; padding: 3px 6px; vertical-align: middle;
-    font-size: 10px; line-height: 1.3;
+    border: 1px solid #b9c2cc; padding: 4px 7px; vertical-align: middle;
+    font-size: 10.5px; line-height: 1.35;
   }
-  .label-cell { background: #e7eef7; font-weight: 600; width: 35%; font-size: 9.5px; }
-  .qr-cell { text-align: center; vertical-align: middle; width: 30%; }
-  .qr-cell img, .qr-cell canvas { width: 80px; height: 80px; display: inline-block; }
-  .qr-caption { font-size: 7.5px; color: #333; margin-top: 1px; line-height: 1.15;
+  .label-cell { background: #e7eef7; font-weight: 700; width: 35%; font-size: 10px; color: #0d1b3e; }
+  .qr-cell { text-align: center; vertical-align: middle; width: 30%; background: #fafbfd; }
+  .qr-cell img, .qr-cell canvas { width: 88px; height: 88px; display: inline-block; }
+  .qr-caption { font-size: 8px; color: #333; margin-top: 2px; line-height: 1.2;
                 word-break: break-word; text-align: center; font-family: Arial, sans-serif; }
   .qr-caption b { color: #0d1b3e; }
 
@@ -80,20 +82,20 @@
   .notes p { margin: 0.5mm 0; font-size: 8.5px; line-height: 1.3; }
   .watermark {
     position: absolute; inset: 0; display: flex; align-items: center;
-    justify-content: center; pointer-events: none; opacity: .07;
-    z-index: 0; transform: rotate(-18deg);
+    justify-content: center; pointer-events: none; opacity: .09;
+    z-index: 0; transform: rotate(-12deg);
   }
-  .watermark svg, .watermark img { width: 70%; height: auto; max-width: 500px; }
+  .watermark svg, .watermark img { width: 92%; height: auto; max-width: 180mm; }
   table.doc-table, .notes, .section-title, .underline, .hr, .doc-footer { position: relative; z-index: 1; }
 
   .doc-footer {
-    margin-top: 3mm; padding-top: 2mm; border-top: 2px solid #1a4d8f;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin-top: 4mm; padding-top: 3mm; border-top: 2px solid #1a4d8f;
+    display: flex; align-items: center; justify-content: center; gap: 14px;
   }
-  .footer-logo { width: 38px; height: 38px; object-fit: contain; }
+  .footer-logo { width: 68px; height: 68px; object-fit: contain; }
   .footer-text { text-align: center; }
-  .footer-en { font-size: 11px; font-weight: 800; color: #0d1b3e; letter-spacing: 1px; }
-  .footer-ar { font-size: 10px; font-weight: 600; color: #1a4d8f; margin-top: 1px; }
+  .footer-en { font-size: 13px; font-weight: 800; color: #0d1b3e; letter-spacing: 1.5px; }
+  .footer-ar { font-size: 12px; font-weight: 600; color: #1a4d8f; margin-top: 2px; }
 
   .copyright { margin-top: 2mm; padding-top: 1.5mm; border-top: 1px dashed #999;
                font-size: 7.5px; color: #444; text-align: center; line-height: 1.3;
@@ -140,25 +142,23 @@
       page-break-after: avoid !important; page-break-inside: avoid !important;
     }
     .doc-date { top: 4mm !important; left: 10mm !important; font-size: 9.5px !important; }
-    .doc-title { margin-top: 2mm !important; }
-    .doc-title h2 { font-size: 21px !important; letter-spacing: 1.5px !important; }
-    .doc-title h3 { font-size: 16px !important; margin-top: 2px !important; }
-    .doc-title h4 { font-size: 12px !important; margin-top: 1px !important; }
-    .hr { margin: 3mm auto !important; width: 50% !important; }
-    .underline { margin: 0 auto 2mm !important; width: 50% !important; }
-    .section-title { font-size: 11px !important; margin: 3mm 0 1.5mm !important; }
+    .doc-title { margin-top: 3mm !important; padding-bottom: 3mm !important; }
+    .doc-title h2 { font-size: 24px !important; letter-spacing: 2px !important; }
+    .doc-title h3 { font-size: 18px !important; margin-top: 4px !important; }
+    .doc-title h4 { font-size: 13px !important; margin-top: 3px !important; }
+    .section-title { font-size: 12px !important; margin: 4mm 0 2mm !important; }
     table.doc-table { margin-bottom: 0 !important; }
-    table.doc-table td { padding: 3px 6px !important; font-size: 10px !important; line-height: 1.3 !important; }
-    .label-cell { font-size: 9.5px !important; }
-    .qr-cell img { width: 80px !important; height: 80px !important; display: inline-block !important; }
-    .qr-caption { font-size: 7.5px !important; margin-top: 1px !important; line-height: 1.15 !important; }
+    table.doc-table td { padding: 4px 7px !important; font-size: 10.5px !important; line-height: 1.35 !important; }
+    .label-cell { font-size: 10px !important; }
+    .qr-cell img { width: 88px !important; height: 88px !important; display: inline-block !important; }
+    .qr-caption { font-size: 8px !important; margin-top: 2px !important; line-height: 1.2 !important; }
     .notes { margin-top: 3mm !important; padding: 2.5mm 3mm !important; border-radius: 2px !important; }
     .notes h4 { font-size: 10.5px !important; margin: 0 0 1.5mm !important; }
     .notes p { font-size: 8.5px !important; margin: 0.5mm 0 !important; line-height: 1.3 !important; }
-    .doc-footer { margin-top: 3mm !important; padding-top: 2mm !important; gap: 10px !important; }
-    .footer-logo { width: 38px !important; height: 38px !important; }
-    .footer-en { font-size: 11px !important; letter-spacing: 1px !important; }
-    .footer-ar { font-size: 10px !important; margin-top: 1px !important; }
+    .doc-footer { margin-top: 4mm !important; padding-top: 3mm !important; gap: 14px !important; }
+    .footer-logo { width: 68px !important; height: 68px !important; }
+    .footer-en { font-size: 13px !important; letter-spacing: 1.5px !important; }
+    .footer-ar { font-size: 12px !important; margin-top: 2px !important; }
     .copyright { margin-top: 2mm !important; padding-top: 1.5mm !important; font-size: 7.5px !important; line-height: 1.3 !important; }
     .copyright .cr-line { margin: 0.5mm 0 !important; }
     .copyright .cr-warn { margin-top: 1.5mm !important; padding: 1.5mm !important; font-size: 7px !important; line-height: 1.25 !important; }
@@ -254,8 +254,7 @@
     <div class="actions">
       <button id="btnGenerate" class="btn-primary" onclick="generate()">توليد الوثيقة</button>
       <button id="btnIssue" class="btn-print" onclick="issueDocument()" style="background:#c62828">🔒 إصدار وقفل الوثيقة</button>
-      <button class="btn-print" onclick="printSecure()" style="background:#0d1b3e">🛡️ طباعة آمنة (PDF كصورة)</button>
-      <button class="btn-print" onclick="window.print()" style="background:#6c757d">🖨️ طباعة عادية</button>
+      <button class="btn-print" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
       <button id="btnUnlock" class="btn-secondary" onclick="unlockForm()" style="display:none">🔓 فتح القفل (إصدار جديد)</button>
       <button class="btn-secondary" onclick="resetForm()">مسح</button>
       <button id="btnInstall" class="btn-primary" style="display:none;background:#198754" onclick="installApp()">📲 تثبيت كتطبيق</button>
@@ -551,113 +550,6 @@
     el.textContent = txt.repeat(40);
   }
   fillMicrotext();
-
-  // ===== الطباعة الآمنة: تحويل الوثيقة لصورة قبل الطباعة =====
-  async function printSecure() {
-    generate();
-    if (typeof html2canvas === 'undefined') {
-      alert('مكتبة الأمان لم تُحمّل بعد. تأكد من الاتصال بالإنترنت أو استخدم الطباعة العادية.');
-      return;
-    }
-    const doc = document.getElementById('doc');
-
-    // إخفاء العناصر الثقيلة مؤقتاً (الشعار 3.4MB يفشل في html2canvas)
-    const watermark = doc.querySelector('.watermark');
-    const stamp = doc.querySelector('.doc-stamp');
-    const microtext = doc.querySelector('.security-microtext');
-    const savedStyles = new Map();
-    [watermark, stamp, microtext].forEach(el => {
-      if (el) {
-        savedStyles.set(el, el.style.cssText);
-        el.style.visibility = 'hidden';
-      }
-    });
-
-    // مؤشر تحميل
-    const loader = document.createElement('div');
-    loader.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;font-family:Arial';
-    loader.innerHTML = '⏳ جارٍ توليد الصورة الآمنة...';
-    document.body.appendChild(loader);
-
-    const restore = () => {
-      [watermark, stamp, microtext].forEach(el => {
-        if (el && savedStyles.has(el)) el.style.cssText = savedStyles.get(el);
-      });
-      if (loader.parentNode) loader.parentNode.removeChild(loader);
-    };
-
-    try {
-      const canvas = await html2canvas(doc, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        imageTimeout: 20000,
-        foreignObjectRendering: false,
-        removeContainer: true,
-        windowWidth: doc.offsetWidth,
-        windowHeight: doc.offsetHeight
-      });
-      const imgData = canvas.toDataURL('image/png', 0.95);
-      restore();
-
-      const win = window.open('', '_blank');
-      win.document.write(`
-        <!DOCTYPE html>
-        <html dir="ltr">
-        <head>
-          <meta charset="utf-8">
-          <title>OK to Board - Secure Print</title>
-          <style>
-            * { margin:0; padding:0; box-sizing:border-box; }
-            html, body { background:#fff; }
-            @page { size: A4 portrait; margin: 0; }
-            .sheet {
-              width: 210mm; height: 297mm;
-              display: flex; align-items: center; justify-content: center;
-              overflow: hidden; page-break-after: avoid;
-            }
-            .sheet img { width: 210mm; height: 297mm; object-fit: contain;
-                         user-select: none; pointer-events: none; -webkit-user-drag: none; }
-            .toolbar { position: fixed; top: 10px; right: 10px; z-index: 1000;
-                       background: #0d1b3e; color: #fff; padding: 10px 16px;
-                       border-radius: 8px; font-family: Arial; font-size: 13px;
-                       box-shadow: 0 4px 14px rgba(0,0,0,0.3); }
-            .toolbar button { background: #198754; color: #fff; border: 0;
-                              padding: 8px 16px; border-radius: 5px; cursor: pointer;
-                              font-size: 13px; font-weight: 700; margin-right: 8px; }
-            @media print { .toolbar { display: none !important; } }
-            /* منع تحديد النص / النسخ - إضافي */
-            body { -webkit-user-select: none; user-select: none; }
-          </style>
-        </head>
-        <body oncontextmenu="return false">
-          <div class="toolbar">
-            🛡️ وضع الطباعة الآمنة — الوثيقة كصورة (غير قابلة للتحرير في Word)
-            <br><br>
-            <button onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
-            <button onclick="window.close()" style="background:#c62828">إغلاق</button>
-          </div>
-          <div class="sheet"><img src="${imgData}" alt="OK to Board"></div>
-          <script>
-            window.addEventListener('load', () => setTimeout(() => window.print(), 500));
-            // منع الحفظ بالصورة من القائمة (لا يمنع 100% لكن طبقة إضافية)
-            document.addEventListener('keydown', e => {
-              if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'u')) e.preventDefault();
-            });
-          <\/script>
-        </body>
-        </html>
-      `);
-      win.document.close();
-    } catch (err) {
-      restore();
-      console.error('Secure print error:', err);
-      alert('فشل توليد الصورة الآمنة:\n' + (err && err.message ? err.message : err) + '\n\nسيتم استخدام الطباعة العادية.');
-      window.print();
-    }
-  }
 
   // ===== توليد معرّف وثيقة + بصمة (Hash) لكشف التزوير =====
   function simpleHash(str) {
