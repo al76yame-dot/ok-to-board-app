@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="OK to Board" />
 <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='28' fill='%231a4d8f'/><text x='96' y='90' font-size='42' font-weight='800' text-anchor='middle' fill='white' font-family='Arial'>OK</text><text x='96' y='140' font-size='30' font-weight='600' text-anchor='middle' fill='white' font-family='Arial'>BOARD</text></svg>" />
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -101,6 +102,20 @@
   .copyright .cr-warn { margin-top: 2mm; padding: 2mm; background: #fff3cd;
                         border: 1px solid #ffc107; border-radius: 3px;
                         color: #856404; font-size: 8.5px; font-weight: 600; }
+
+  /* علامات الأمان الاحترافية */
+  .security-microtext {
+    position: absolute; left: 0; right: 0; bottom: 4mm;
+    height: 3mm; overflow: hidden; opacity: 0.55;
+    font-size: 2.5px; line-height: 3px; letter-spacing: 0.2px;
+    color: #1a4d8f; pointer-events: none; user-select: none;
+    text-align: center; font-family: Arial, sans-serif;
+    z-index: 2; white-space: nowrap;
+  }
+  .security-border {
+    position: absolute; inset: 4mm; border: 1px dashed #1a4d8f;
+    pointer-events: none; opacity: 0.25; z-index: 0; border-radius: 2px;
+  }
 
   .doc-stamp {
     position: absolute; bottom: 28mm; left: 16mm;
@@ -227,7 +242,8 @@
     <div class="actions">
       <button id="btnGenerate" class="btn-primary" onclick="generate()">توليد الوثيقة</button>
       <button id="btnIssue" class="btn-print" onclick="issueDocument()" style="background:#c62828">🔒 إصدار وقفل الوثيقة</button>
-      <button class="btn-print" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+      <button class="btn-print" onclick="printSecure()" style="background:#0d1b3e">🛡️ طباعة آمنة (PDF كصورة)</button>
+      <button class="btn-print" onclick="window.print()" style="background:#6c757d">🖨️ طباعة عادية</button>
       <button id="btnUnlock" class="btn-secondary" onclick="unlockForm()" style="display:none">🔓 فتح القفل (إصدار جديد)</button>
       <button class="btn-secondary" onclick="resetForm()">مسح</button>
       <button id="btnInstall" class="btn-primary" style="display:none;background:#198754" onclick="installApp()">📲 تثبيت كتطبيق</button>
@@ -346,6 +362,8 @@
           <div class="footer-ar">اليامي للسفر والسياحة</div>
         </div>
       </div>
+
+      <div class="security-microtext" aria-hidden="true"></div>
 
       <div class="copyright">
         <div class="cr-line"><b>© <span id="cr_year"></span> ALYAME TRAVEL &amp; TOURISM</b> — All rights reserved. جميع الحقوق محفوظة.</div>
@@ -512,6 +530,95 @@
 
   // ===== سنة حقوق النشر =====
   $('cr_year').textContent = new Date().getFullYear();
+
+  // ===== Micro-text أمني (نص دقيق متكرر يصعب تزويره) =====
+  function fillMicrotext() {
+    const el = document.querySelector('.security-microtext');
+    if (!el) return;
+    const txt = 'ALYAME TRAVEL & TOURISM • OFFICIAL DOCUMENT • DO NOT FORGE • اليامي للسفر والسياحة • وثيقة رسمية • ';
+    el.textContent = txt.repeat(40);
+  }
+  fillMicrotext();
+
+  // ===== الطباعة الآمنة: تحويل الوثيقة لصورة قبل الطباعة =====
+  async function printSecure() {
+    generate();
+    if (typeof html2canvas === 'undefined') {
+      alert('مكتبة الأمان لم تُحمّل بعد. تأكد من الاتصال بالإنترنت أو استخدم الطباعة العادية.');
+      return;
+    }
+    const doc = document.getElementById('doc');
+    const old = doc.style.boxShadow;
+    doc.style.boxShadow = 'none';
+
+    try {
+      const canvas = await html2canvas(doc, {
+        scale: 2.5,         // دقة عالية للطباعة الواضحة
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: doc.offsetWidth,
+        windowHeight: doc.offsetHeight
+      });
+      const imgData = canvas.toDataURL('image/png', 1.0);
+
+      const win = window.open('', '_blank');
+      win.document.write(`
+        <!DOCTYPE html>
+        <html dir="ltr">
+        <head>
+          <meta charset="utf-8">
+          <title>OK to Board - Secure Print</title>
+          <style>
+            * { margin:0; padding:0; box-sizing:border-box; }
+            html, body { background:#fff; }
+            @page { size: A4 portrait; margin: 0; }
+            .sheet {
+              width: 210mm; height: 297mm;
+              display: flex; align-items: center; justify-content: center;
+              overflow: hidden; page-break-after: avoid;
+            }
+            .sheet img { width: 210mm; height: 297mm; object-fit: contain;
+                         user-select: none; pointer-events: none; -webkit-user-drag: none; }
+            .toolbar { position: fixed; top: 10px; right: 10px; z-index: 1000;
+                       background: #0d1b3e; color: #fff; padding: 10px 16px;
+                       border-radius: 8px; font-family: Arial; font-size: 13px;
+                       box-shadow: 0 4px 14px rgba(0,0,0,0.3); }
+            .toolbar button { background: #198754; color: #fff; border: 0;
+                              padding: 8px 16px; border-radius: 5px; cursor: pointer;
+                              font-size: 13px; font-weight: 700; margin-right: 8px; }
+            @media print { .toolbar { display: none !important; } }
+            /* منع تحديد النص / النسخ - إضافي */
+            body { -webkit-user-select: none; user-select: none; }
+          </style>
+        </head>
+        <body oncontextmenu="return false">
+          <div class="toolbar">
+            🛡️ وضع الطباعة الآمنة — الوثيقة كصورة (غير قابلة للتحرير في Word)
+            <br><br>
+            <button onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+            <button onclick="window.close()" style="background:#c62828">إغلاق</button>
+          </div>
+          <div class="sheet"><img src="${imgData}" alt="OK to Board"></div>
+          <script>
+            window.addEventListener('load', () => setTimeout(() => window.print(), 500));
+            // منع الحفظ بالصورة من القائمة (لا يمنع 100% لكن طبقة إضافية)
+            document.addEventListener('keydown', e => {
+              if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'u')) e.preventDefault();
+            });
+          <\/script>
+        </body>
+        </html>
+      `);
+      win.document.close();
+    } catch (err) {
+      console.error(err);
+      alert('فشلت الطباعة الآمنة. سأستخدم الطباعة العادية.\n' + err.message);
+      window.print();
+    } finally {
+      doc.style.boxShadow = old;
+    }
+  }
 
   // ===== توليد معرّف وثيقة + بصمة (Hash) لكشف التزوير =====
   function simpleHash(str) {
