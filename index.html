@@ -286,7 +286,10 @@
       <button id="btnInstall" class="btn-primary" style="display:none;background:#198754" onclick="installApp()">📲 تثبيت كتطبيق</button>
     </div>
     <div id="issuedBadge" style="display:none;margin-top:10px;padding:10px;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;color:#856404;font-size:13px">
-      🔒 <b>تم إصدار الوثيقة وقفلها.</b> لا يمكن تعديلها. لإصدار وثيقة جديدة اضغط "فتح القفل".
+      🔒 <b>تم إصدار الوثيقة وقفلها.</b> الرقم التسلسلي: <b id="badgeSeq" style="color:#c62828"></b> — لا يمكن تعديلها. لإصدار وثيقة جديدة اضغط "فتح القفل".
+    </div>
+    <div class="actions" style="margin-top:8px">
+      <button class="btn-secondary" onclick="openRegistry()" style="background:#0d1b3e">📋 سجل الوثائق الصادرة</button>
     </div>
   </div>
 
@@ -409,6 +412,7 @@
 
       <div class="copyright">
         <div class="cr-line"><b>© <span id="cr_year"></span> ALYAME TRAVEL &amp; TOURISM</b> — All rights reserved. جميع الحقوق محفوظة.</div>
+        <div class="cr-line">Serial No. | الرقم التسلسلي: <b id="doc_seq" style="font-size:11px;color:#c62828">—</b></div>
         <div class="cr-line">Document ID: <b id="doc_id">—</b> &nbsp;|&nbsp; Hash: <b id="doc_hash">—</b> &nbsp;|&nbsp; Issued: <b id="doc_issued_at">—</b></div>
         <div class="cr-warn">⚠ Reprinting, modifying, or altering this document after issuance is strictly prohibited and constitutes forgery.<br>
         يُمنع منعاً باتاً إعادة طباعة هذه الوثيقة أو تعديلها أو تغيير أي بيانات فيها بعد إصدارها — وأي تلاعب يُعد تزويراً يعاقب عليه القانون.</div>
@@ -426,9 +430,12 @@
     return `${d}/${m}/${y}`;
   }
   function fmtDateUS(iso) {
-    if (!iso) return '';
-    const [y,m,d] = iso.split('-');
-    return `${parseInt(m)}/${parseInt(d)}/${y}`;
+    // موحّد: اليوم/الشهر/السنة
+    return fmtDate(iso);
+  }
+  function fmtDateTime(dt) {
+    const p = n => String(n).padStart(2, '0');
+    return `${p(dt.getDate())}/${p(dt.getMonth()+1)}/${dt.getFullYear()} ${p(dt.getHours())}:${p(dt.getMinutes())}`;
   }
   function genVerificationNo() {
     const y = new Date().getFullYear();
@@ -490,10 +497,7 @@
       visa_no: $('visa_no').value
     };
 
-    $('d_date').textContent = new Date().toLocaleString('en-US', {
-      weekday:'long', year:'numeric', month:'long', day:'numeric',
-      hour:'numeric', minute:'2-digit'
-    });
+    $('d_date').textContent = fmtDateTime(new Date());
     $('d_vno').textContent = data.vno;
     $('d_issue').textContent = fmtDate(data.issue);
     $('d_valid').textContent = fmtDate(data.valid);
@@ -599,6 +603,128 @@
     return 'DOC-' + t + '-' + r;
   }
 
+  // ===== التسلسل الرقمي + سجل الوثائق =====
+  const SEQ_KEY = 'okboard:nextSeq';
+  const REG_KEY = 'okboard:registry';
+
+  function nextSeqNumber() {
+    let n = parseInt(localStorage.getItem(SEQ_KEY) || '1', 10);
+    if (isNaN(n) || n < 1) n = 1;
+    localStorage.setItem(SEQ_KEY, String(n + 1));
+    return n;
+  }
+  function formatSeq(n) {
+    const y = new Date().getFullYear();
+    return `EGV-${y}-${String(n).padStart(5, '0')}`;
+  }
+  function getRegistry() {
+    try { return JSON.parse(localStorage.getItem(REG_KEY) || '[]'); } catch(e) { return []; }
+  }
+  function saveRegistry(reg) {
+    localStorage.setItem(REG_KEY, JSON.stringify(reg));
+  }
+  function addToRegistry(entry) {
+    const reg = getRegistry();
+    reg.unshift(entry); // الأحدث أولاً
+    saveRegistry(reg);
+  }
+
+  function openRegistry() {
+    const reg = getRegistry();
+    const win = window.open('', '_blank', 'width=900,height=700');
+    let rows = '';
+    if (reg.length === 0) {
+      rows = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#888">لا توجد وثائق مسجلة بعد</td></tr>';
+    } else {
+      reg.forEach((r, i) => {
+        rows += `<tr>
+          <td><b style="color:#c62828">${r.seq}</b></td>
+          <td>${escapeHtml(r.name_en || r.name || '')}</td>
+          <td>${escapeHtml(r.name_ar || '')}</td>
+          <td>${escapeHtml(r.passport || '')}</td>
+          <td>${escapeHtml(r.visa_type || '')}</td>
+          <td>${escapeHtml(r.issued_at || '')}</td>
+          <td><button onclick="if(confirm('حذف هذا السجل؟')) { window.opener.deleteRegEntry(${i}); location.reload(); }" style="background:#c62828;color:#fff;border:0;padding:4px 8px;border-radius:4px;cursor:pointer">حذف</button></td>
+        </tr>`;
+      });
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    win.document.write(`
+      <!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8">
+      <title>سجل الوثائق الصادرة | OK to Board</title>
+      <style>
+        body { font-family: "Segoe UI", Tahoma, Arial; margin: 0; padding: 20px; background: #f0f2f5; }
+        h1 { color: #0d1b3e; margin: 0 0 16px; font-size: 22px; }
+        .stats { background: #fff; padding: 12px 16px; border-radius: 8px; margin-bottom: 14px;
+                 box-shadow: 0 2px 6px rgba(0,0,0,.08); font-size: 14px; }
+        .stats b { color: #c62828; font-size: 18px; }
+        .toolbar { margin-bottom: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .toolbar input { padding: 8px 12px; border: 1px solid #ccc; border-radius: 5px; flex: 1; min-width: 200px; }
+        .toolbar button { padding: 8px 16px; background: #1a4d8f; color: #fff; border: 0; border-radius: 5px; cursor: pointer; font-weight: 600; }
+        .toolbar button.danger { background: #c62828; }
+        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        th, td { padding: 10px 12px; border-bottom: 1px solid #eee; text-align: right; font-size: 13px; }
+        th { background: #0d1b3e; color: #fff; font-size: 12px; }
+        tr:hover { background: #f8f9fb; }
+      </style>
+      </head><body>
+        <h1>📋 سجل الوثائق الصادرة — ALYAME TRAVEL & TOURISM</h1>
+        <div class="stats">إجمالي الوثائق المُصدرة: <b>${reg.length}</b></div>
+        <div class="toolbar">
+          <input id="search" placeholder="بحث بالاسم / رقم الجواز / الرقم التسلسلي..." oninput="filterRows(this.value)">
+          <button onclick="window.print()">🖨️ طباعة السجل</button>
+          <button onclick="exportCsv()">💾 تصدير CSV</button>
+          <button class="danger" onclick="if(confirm('سيتم مسح كل السجل. متأكد؟')) { window.opener.clearRegistry(); location.reload(); }">🗑️ مسح السجل</button>
+        </div>
+        <table id="regTable">
+          <thead><tr>
+            <th>الرقم التسلسلي</th>
+            <th>الاسم EN</th>
+            <th>الاسم AR</th>
+            <th>رقم الجواز</th>
+            <th>نوع التأشيرة</th>
+            <th>تاريخ الإصدار</th>
+            <th>إجراء</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <script>
+          function filterRows(q) {
+            q = q.toLowerCase();
+            document.querySelectorAll('#regTable tbody tr').forEach(tr => {
+              tr.style.display = tr.textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+            });
+          }
+          function exportCsv() {
+            const reg = ${JSON.stringify(reg)};
+            const headers = ['Serial','Name EN','Name AR','Passport','Visa Type','Visa No','Issued At','Doc ID','Hash'];
+            const rows = reg.map(r => [r.seq, r.name_en, r.name_ar, r.passport, r.visa_type, r.visa_no, r.issued_at, r.doc_id, r.hash]);
+            const csv = [headers, ...rows].map(r => r.map(c => '"' + String(c||'').replace(/"/g,'""') + '"').join(',')).join('\\n');
+            const blob = new Blob(['\\uFEFF' + csv], {type: 'text/csv;charset=utf-8'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'okboard-registry-' + new Date().toISOString().slice(0,10) + '.csv';
+            a.click();
+          }
+        <\/script>
+      </body></html>
+    `);
+    win.document.close();
+  }
+
+  function deleteRegEntry(idx) {
+    const reg = getRegistry();
+    reg.splice(idx, 1);
+    saveRegistry(reg);
+  }
+  function clearRegistry() {
+    localStorage.removeItem(REG_KEY);
+    localStorage.removeItem(SEQ_KEY);
+  }
+
   // ===== إصدار الوثيقة وقفل النموذج =====
   let isIssued = false;
 
@@ -621,17 +747,35 @@
     if (!confirm('⚠️ تنبيه: بعد الإصدار سيتم قفل الوثيقة ولن يمكن تعديلها.\n\nهل تريد المتابعة؟')) return;
 
     const issuedAt = new Date();
+    const seqNum = nextSeqNumber();
+    const seq = formatSeq(seqNum);
     const docId = genDocId();
     const hashSource = [
       $('name_en').value, $('passport').value, $('vno').value,
       $('issue').value, $('valid').value, $('visa_type').value,
-      $('visa_no').value, docId, issuedAt.toISOString()
+      $('visa_no').value, docId, seq, issuedAt.toISOString()
     ].join('|');
     const hash = simpleHash(hashSource);
+    const issuedAtStr = fmtDateTime(issuedAt);
 
+    $('doc_seq').textContent = seq;
+    $('badgeSeq').textContent = seq;
     $('doc_id').textContent = docId;
     $('doc_hash').textContent = hash;
-    $('doc_issued_at').textContent = issuedAt.toLocaleString('en-GB');
+    $('doc_issued_at').textContent = issuedAtStr;
+
+    // حفظ في السجل
+    addToRegistry({
+      seq: seq,
+      name_en: $('name_en').value.trim(),
+      name_ar: $('name_ar').value.trim(),
+      passport: $('passport').value.trim(),
+      visa_type: $('visa_type').value,
+      visa_no: $('visa_no').value.trim(),
+      issued_at: issuedAtStr,
+      doc_id: docId,
+      hash: hash
+    });
 
     // قفل جميع الحقول
     document.querySelectorAll('.panel input, .panel select').forEach(el => {
@@ -654,7 +798,8 @@
       + '&vt=' + encodeURIComponent($('visa_type').value)
       + '&vn=' + encodeURIComponent($('visa_no').value)
       + '&d=' + encodeURIComponent(docId)
-      + '&h=' + encodeURIComponent(hash);
+      + '&h=' + encodeURIComponent(hash)
+      + '&s=' + encodeURIComponent(seq);
     if (typeof QRCode !== 'undefined' && QRCode.toDataURL) {
       QRCode.toDataURL(qrUrl, { width: 400, margin: 1, errorCorrectionLevel: 'H' }, (err, url) => {
         if (!err && url) $('qr').src = url;
@@ -674,6 +819,7 @@
     $('btnIssue').style.display = 'inline-block';
     $('btnUnlock').style.display = 'none';
     $('issuedBadge').style.display = 'none';
+    $('doc_seq').textContent = '—';
     $('doc_id').textContent = '—';
     $('doc_hash').textContent = '—';
     $('doc_issued_at').textContent = '—';

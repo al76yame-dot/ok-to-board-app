@@ -59,12 +59,14 @@
   const vno = params.get('v') || '';
   const visaType = params.get('vt') || '';
   const visaNo = params.get('vn') || '';
+  const seq = params.get('s') || '';
   const content = document.getElementById('content');
 
   if (!name && !passport) {
     content.innerHTML = '<div class="empty">لا توجد بيانات في الرابط</div>';
   } else {
     let html = '';
+    if (seq) html += `<div class="row"><span class="label">Serial No. | الرقم التسلسلي</span><span class="value" style="color:#c62828">${escapeHtml(seq)}</span></div>`;
     if (name) html += `<div class="row"><span class="label">Passenger Name | اسم المسافر</span><span class="value">${escapeHtml(name)}</span></div>`;
     if (passport) html += `<div class="row"><span class="label">Passport No. | رقم الجواز</span><span class="value">${escapeHtml(passport)}</span></div>`;
     if (visaType) html += `<div class="row"><span class="label">Visa Type | نوع التأشيرة</span><span class="value">${escapeHtml(visaType)}</span></div>`;
