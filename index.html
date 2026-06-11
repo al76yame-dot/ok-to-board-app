@@ -603,15 +603,73 @@
     return 'DOC-' + t + '-' + r;
   }
 
-  // ===== التسلسل الرقمي + سجل الوثائق =====
+  // ===== التسلسل الرقمي + سجل الوثائق (Supabase مركزي) =====
+  const SB_URL = 'https://wcknrzuedgkcyygeqmqw.supabase.co';
+  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indja25yenVlZGdrY3l5Z2VxbXF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MzkwNzAsImV4cCI6MjA5MTMxNTA3MH0.3gU4BYDVjYyl9FoafLGVjcWtv8YFcNRCSTmDtn9ep1Q';
+  const SB_HEADERS = { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
+
   const SEQ_KEY = 'okboard:nextSeq';
   const REG_KEY = 'okboard:registry';
+  const USER_KEY = 'okboard:user';
 
+  function getIssuedBy() {
+    let u = localStorage.getItem(USER_KEY);
+    if (!u) {
+      u = prompt('أدخل اسم الموظف المُصدِر (سيُحفظ مع كل وثيقة):', '');
+      if (u) localStorage.setItem(USER_KEY, u);
+    }
+    return u || 'unknown';
+  }
+
+  async function nextSeqNumberRemote() {
+    try {
+      const r = await fetch(SB_URL + '/rest/v1/rpc/okboard_next_seq', {
+        method: 'POST', headers: SB_HEADERS, body: '{}'
+      });
+      if (!r.ok) throw new Error('seq fetch failed: ' + r.status);
+      const n = await r.json();
+      return parseInt(n, 10);
+    } catch (e) {
+      console.warn('Remote seq failed, fallback to local:', e);
+      let n = parseInt(localStorage.getItem(SEQ_KEY) || '1', 10);
+      if (isNaN(n) || n < 1) n = 1;
+      localStorage.setItem(SEQ_KEY, String(n + 1));
+      return n;
+    }
+  }
   function nextSeqNumber() {
     let n = parseInt(localStorage.getItem(SEQ_KEY) || '1', 10);
     if (isNaN(n) || n < 1) n = 1;
     localStorage.setItem(SEQ_KEY, String(n + 1));
     return n;
+  }
+
+  async function insertRemote(entry) {
+    try {
+      const r = await fetch(SB_URL + '/rest/v1/okboard_registry', {
+        method: 'POST',
+        headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
+        body: JSON.stringify(entry)
+      });
+      if (!r.ok) throw new Error('insert failed: ' + r.status + ' ' + await r.text());
+      return true;
+    } catch (e) {
+      console.error('Supabase insert error:', e);
+      return false;
+    }
+  }
+
+  async function fetchRemoteRegistry() {
+    try {
+      const r = await fetch(SB_URL + '/rest/v1/okboard_registry?select=*&order=issued_at.desc&limit=1000', {
+        headers: SB_HEADERS
+      });
+      if (!r.ok) throw new Error('fetch failed: ' + r.status);
+      return await r.json();
+    } catch (e) {
+      console.warn('Supabase fetch failed, using local:', e);
+      return null;
+    }
   }
   function formatSeq(n) {
     const y = new Date().getFullYear();
@@ -629,22 +687,35 @@
     saveRegistry(reg);
   }
 
-  function openRegistry() {
-    const reg = getRegistry();
+  async function openRegistry() {
+    const remote = await fetchRemoteRegistry();
+    let reg, source;
+    if (remote && Array.isArray(remote)) {
+      reg = remote.map(r => ({
+        seq: r.seq, name_en: r.name_en, name_ar: r.name_ar, passport: r.passport,
+        visa_type: r.visa_type, visa_no: r.visa_no,
+        issued_at: r.issued_at ? fmtDateTime(new Date(r.issued_at)) : '',
+        issued_by: r.issued_by || '', doc_id: r.doc_id, hash: r.hash
+      }));
+      source = 'مركزي (Supabase) — يشمل جميع الموظفين';
+    } else {
+      reg = getRegistry();
+      source = 'محلي فقط (لا يوجد اتصال بالسيرفر)';
+    }
     const win = window.open('', '_blank', 'width=900,height=700');
     let rows = '';
     if (reg.length === 0) {
       rows = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#888">لا توجد وثائق مسجلة بعد</td></tr>';
     } else {
-      reg.forEach((r, i) => {
+      reg.forEach((r) => {
         rows += `<tr>
-          <td><b style="color:#c62828">${r.seq}</b></td>
+          <td><b style="color:#c62828">${escapeHtml(r.seq)}</b></td>
           <td>${escapeHtml(r.name_en || r.name || '')}</td>
           <td>${escapeHtml(r.name_ar || '')}</td>
           <td>${escapeHtml(r.passport || '')}</td>
           <td>${escapeHtml(r.visa_type || '')}</td>
+          <td>${escapeHtml(r.issued_by || '')}</td>
           <td>${escapeHtml(r.issued_at || '')}</td>
-          <td><button onclick="if(confirm('حذف هذا السجل؟')) { window.opener.deleteRegEntry(${i}); location.reload(); }" style="background:#c62828;color:#fff;border:0;padding:4px 8px;border-radius:4px;cursor:pointer">حذف</button></td>
         </tr>`;
       });
     }
@@ -672,12 +743,15 @@
       </style>
       </head><body>
         <h1>📋 سجل الوثائق الصادرة — ALYAME TRAVEL & TOURISM</h1>
-        <div class="stats">إجمالي الوثائق المُصدرة: <b>${reg.length}</b></div>
+        <div class="stats">
+          إجمالي الوثائق المُصدرة: <b>${reg.length}</b>
+          <span style="float:left;font-size:12px;color:#1a4d8f;font-weight:600">📡 المصدر: ${source}</span>
+        </div>
         <div class="toolbar">
-          <input id="search" placeholder="بحث بالاسم / رقم الجواز / الرقم التسلسلي..." oninput="filterRows(this.value)">
+          <input id="search" placeholder="بحث بالاسم / رقم الجواز / الموظف / الرقم التسلسلي..." oninput="filterRows(this.value)">
           <button onclick="window.print()">🖨️ طباعة السجل</button>
           <button onclick="exportCsv()">💾 تصدير CSV</button>
-          <button class="danger" onclick="if(confirm('سيتم مسح كل السجل. متأكد؟')) { window.opener.clearRegistry(); location.reload(); }">🗑️ مسح السجل</button>
+          <button onclick="location.reload()">🔄 تحديث</button>
         </div>
         <table id="regTable">
           <thead><tr>
@@ -686,8 +760,8 @@
             <th>الاسم AR</th>
             <th>رقم الجواز</th>
             <th>نوع التأشيرة</th>
+            <th>الموظف المُصدِر</th>
             <th>تاريخ الإصدار</th>
-            <th>إجراء</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -728,7 +802,7 @@
   // ===== إصدار الوثيقة وقفل النموذج =====
   let isIssued = false;
 
-  function issueDocument() {
+  async function issueDocument() {
     generate(); // ضمان أحدث بيانات
 
     const requiredFields = [
@@ -746,8 +820,9 @@
 
     if (!confirm('⚠️ تنبيه: بعد الإصدار سيتم قفل الوثيقة ولن يمكن تعديلها.\n\nهل تريد المتابعة؟')) return;
 
+    const issuedBy = getIssuedBy();
     const issuedAt = new Date();
-    const seqNum = nextSeqNumber();
+    const seqNum = await nextSeqNumberRemote();
     const seq = formatSeq(seqNum);
     const docId = genDocId();
     const hashSource = [
@@ -764,18 +839,33 @@
     $('doc_hash').textContent = hash;
     $('doc_issued_at').textContent = issuedAtStr;
 
-    // حفظ في السجل
-    addToRegistry({
+    const entry = {
       seq: seq,
       name_en: $('name_en').value.trim(),
       name_ar: $('name_ar').value.trim(),
       passport: $('passport').value.trim(),
       visa_type: $('visa_type').value,
       visa_no: $('visa_no').value.trim(),
-      issued_at: issuedAtStr,
+      vno: $('vno').value,
+      issue_date: $('issue').value || null,
+      valid_date: $('valid').value || null,
+      airline: $('airline').value.trim(),
+      flight: $('flight').value.trim(),
+      arrival: $('arrival').value || null,
+      nationality: $('nationality').value.trim(),
+      birth: $('birth').value || null,
       doc_id: docId,
-      hash: hash
-    });
+      hash: hash,
+      issued_by: issuedBy,
+      issued_at: issuedAt.toISOString()
+    };
+    // محلي للنسخ الاحتياطي
+    addToRegistry({ ...entry, issued_at: issuedAtStr });
+    // مركزي على Supabase
+    const ok = await insertRemote(entry);
+    if (!ok) {
+      alert('⚠️ تنبيه: تم إصدار الوثيقة محلياً لكن فشل حفظها على السيرفر المركزي.\nسيتم مزامنتها لاحقاً.');
+    }
 
     // قفل جميع الحقول
     document.querySelectorAll('.panel input, .panel select').forEach(el => {
