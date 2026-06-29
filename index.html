@@ -474,6 +474,7 @@
   function initDefaults() {
     if (!$('issue').value) $('issue').value = todayISO();
     if (!$('valid').value) $('valid').value = validityForVisaType($('visa_type').value, $('issue').value);
+    if (!$('arrival').value) $('arrival').value = addDays($('issue').value, 1);
     if (!$('vno').value) $('vno').value = genVerificationNo();
   }
 
