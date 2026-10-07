@@ -924,7 +924,16 @@
   });
 
   // إعادة التوليد قبل الطباعة لضمان أحدث QR
-  window.addEventListener('beforeprint', () => generate());
+  const origTitle = document.title;
+  window.addEventListener('beforeprint', () => {
+    generate();
+    const nm = ($('name_en').value || $('name_ar').value || '').trim();
+    const pp = $('passport').value.trim();
+    const sq = ($('doc_seq').textContent || '').replace('—', '').trim();
+    const parts = [nm, pp, sq].filter(Boolean).join(' - ').replace(/[\\/:*?"<>|]/g, '');
+    if (parts) document.title = parts;
+  });
+  window.addEventListener('afterprint', () => { document.title = origTitle; });
 
   // ===== PWA: تسجيل Service Worker وزر التثبيت =====
   if ('serviceWorker' in navigator) {
