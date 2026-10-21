@@ -429,6 +429,15 @@
     const [y,m,d] = iso.split('-');
     return `${d}/${m}/${y}`;
   }
+  // الجوال يأخذ اسم ملف PDF من عنوان الصفحة وقت الفتح، فنحدّثه مباشرة مع كل تعديل
+  function setDocTitle() {
+    const nm = ($('name_en').value || $('name_ar').value || '').trim();
+    const pp = $('passport').value.trim();
+    const seqEl = $('doc_seq');
+    const sq = seqEl ? seqEl.textContent.replace('—', '').trim() : '';
+    const t = [nm, pp, sq].filter(Boolean).join(' - ').replace(/[\\/:*?"<>|]/g, '');
+    document.title = t || 'OK to Board';
+  }
   function fmtDateUS(iso) {
     // موحّد: اليوم/الشهر/السنة
     return fmtDate(iso);
@@ -512,6 +521,7 @@
     $('d_airline').textContent = data.airline;
     $('d_flight').textContent = data.flight;
     $('d_arrival').textContent = fmtDateUS(data.arrival);
+    setDocTitle();
 
     const qrName = (data.name_en || data.name || '').trim() || 'N/A';
     const qrPass = (data.passport || '').trim() || 'N/A';
@@ -836,6 +846,7 @@
 
     $('doc_seq').textContent = seq;
     $('badgeSeq').textContent = seq;
+    setDocTitle();
     $('doc_id').textContent = docId;
     $('doc_hash').textContent = hash;
     $('doc_issued_at').textContent = issuedAtStr;
@@ -924,16 +935,7 @@
   });
 
   // إعادة التوليد قبل الطباعة لضمان أحدث QR
-  const origTitle = document.title;
-  window.addEventListener('beforeprint', () => {
-    generate();
-    const nm = ($('name_en').value || $('name_ar').value || '').trim();
-    const pp = $('passport').value.trim();
-    const sq = ($('doc_seq').textContent || '').replace('—', '').trim();
-    const parts = [nm, pp, sq].filter(Boolean).join(' - ').replace(/[\\/:*?"<>|]/g, '');
-    if (parts) document.title = parts;
-  });
-  window.addEventListener('afterprint', () => { document.title = origTitle; });
+  window.addEventListener('beforeprint', () => generate());
 
   // ===== PWA: تسجيل Service Worker وزر التثبيت =====
   if ('serviceWorker' in navigator) {
